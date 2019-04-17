@@ -2,13 +2,13 @@
 #!/bin/bash
 
 # number of threads
-for t in 1 2 4 8
+for t in 1 2 4 6 8 10 
 do
     echo NUMT = $t
-    for a in 100000 300000 600000 1000000
+    for a in 1000000 5000000 10000000 20000000 40000000 60000000 80000000 100000000 25000000 
     do
-        g++ -DNUMT=$t -DNUMTRIALS=$a  project1.cpp -o proj.exe -lm -fopenmp
-        ./proj.exe
+        g++ -DNUMT=$t -DNUMTRIALS=$a  project1.cpp -o proj -lm -fopenmp
+        ./proj
     done
 done
 
