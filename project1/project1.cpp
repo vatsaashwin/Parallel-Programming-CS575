@@ -178,7 +178,7 @@ int main( int argc, char *argv[ ] )
 	}
 
 	printf( "Threads\tTrials\tProbability\tMegaTrialsPerSecond\n" );
-	printf( "%d\t%d\t%8.4lf\t%8.4lf\n", NUMT, NUMTRIALS, currentProb, maxPerformance );
+	printf( "%d\t%d\t%10.2lf\t%10.2lf\n", NUMT, NUMTRIALS, currentProb, maxPerformance );
 }
 
 
