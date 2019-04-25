@@ -3,7 +3,7 @@
 #include <math.h>
 
 #define NUMT             4
-#define NUMNODES        10000
+#define NUMNODES        100
 #define NUMTRIES        5    // you decide
 
 #define XMIN     0.
@@ -86,97 +86,61 @@ float Height( int iu, int iv )    // iu,iv = 0 .. NUMNODES-1
     // then that contribution to the overall volume is negative
 }
 
-// void run_with_NUMNODES(int NUMNODES) {
-//     // the area of a single full-sized tile:
-//     float fullTileArea = (  ( ( XMAX - XMIN )/(float)(NUMNODES-1) )  *
-//                           ( ( YMAX - YMIN )/(float)(NUMNODES-1) )  );
-    
-//     // sum up the weighted heights into the variable "volume"
-//     // using an OpenMP for loop and a reduction:
-//     double sum = 0.;
-//     double sumMegaMults = 0.;
-    
-//     for (int t=0; t < NUMTRIES; t++) {
-        
-//         sum = 0.;
-//         double time0 = omp_get_wtime( );
-//         double end = NUMNODES-1;
-//         #pragma omp parallel for default(none), shared(fullTileArea, NUMNODES, end), reduction(+:sum)
-//         for( int i = 0; i <= NUMNODES*NUMNODES; i++ )
-//         {
-//             int iu = i % NUMNODES;
-//             int iv = i / NUMNODES;
-            
-//             double w = 1.;
-//             if ((iu == 0 && iv == 0) || (iu == 0 && iv == end) || (iu == end && iv == 0) || (iu == end && iv == end))
-//                 w = 0.25;
-//             else if (iu == 0 || iu == end || iv == 0 || iv == end)
-//                 w = 0.5;
-//             sum += Height(iu, iv, NUMNODES) * w * fullTileArea;
-//         }
-        
-//         double time1 = omp_get_wtime( );
-//         double time = time1 - time0;
-//         double megaMults = (double)(NUMNODES*NUMNODES)/(time)/1000000.;
-//         sumMegaMults += megaMults;
-//     }
-    
-//     double avgMegaMults = sumMegaMults/(double)NUMTRIES;
-//     printf("Number Nodes = %d \n", NUMNODES);
-//     printf("Result = %lf \n", sum);
-//     printf("Performance = %8.2lf megaMults/Sec\n", avgMegaMults);
-// }
-
-
-
 int main( int argc, char *argv[ ] )
 {
     #ifndef _OPENMP
         fprintf( stderr, "OpenMP is not supported here -- sorry.\n" );
         return 1;
     #endif
-    
+
     omp_set_num_threads( NUMT );
     fprintf( stderr, "Using %d threads\n", NUMT );
     
-    // the area of a single full-sized tile:
-    float fullTileArea = (  ( ( XMAX - XMIN )/(float)(NUMNODES-1) )  *
-                ( ( YMAX - YMIN )/(float)(NUMNODES-1) )  );
 
-    // sum up the weighted heights into the variable "volume"
-    // using an OpenMP for loop and a reduction:
-    double sum = 0.;
-    double sumMegaMults = 0.;
-    
-    for (int t=0; t < NUMTRIES; t++) {
+    for (int NUMNODES=200; NUMNODES <= 3000; NUMNODES+=200) {
+        // the area of a single full-sized tile:
+        float fullTileArea = (  ( ( XMAX - XMIN )/(float)(NUMNODES-1) )  *
+                              ( ( YMAX - YMIN )/(float)(NUMNODES-1) )  );
         
-        sum = 0.;
-        double time0 = omp_get_wtime( );
-        double end = NUMNODES-1;
-        #pragma omp parallel for default(none), shared(fullTileArea, NUMNODES, end), reduction(+:sum)
-        for( int i = 0; i <= NUMNODES*NUMNODES; i++ )
-        {
-            int iu = i % NUMNODES;
-            int iv = i / NUMNODES;
+        // sum up the weighted heights into the variable "volume"
+        // using an OpenMP for loop and a reduction:
+        double sum = 0.;
+        double sumMegaMults = 0.;
+        
+        for (int t=0; t < NUMTRIES; t++) {
             
-            double w = 1.;
-            if ((iu == 0 && iv == 0) || (iu == 0 && iv == end) || (iu == end && iv == 0) || (iu == end && iv == end))
-                w = 0.25;
-            else if (iu == 0 || iu == end || iv == 0 || iv == end)
-                w = 0.5;
-            sum += Height(iu, iv, NUMNODES) * w * fullTileArea;
+            sum = 0.;
+            double time0 = omp_get_wtime( );
+            double end = NUMNODES-1;
+            #pragma omp parallel for default(none), shared(fullTileArea, NUMNODES, end), reduction(+:sum)
+            for( int i = 0; i <= NUMNODES*NUMNODES; i++ )
+            {
+                int iu = i % NUMNODES;
+                int iv = i / NUMNODES;
+                
+                double w = 1.;
+                if ((iu == 0 && iv == 0) || (iu == 0 && iv == end) || (iu == end && iv == 0) || (iu == end && iv == end))
+                    w = 0.25;
+                else if (iu == 0 || iu == end || iv == 0 || iv == end)
+                    w = 0.5;
+                sum += Height(iu, iv) * w * fullTileArea;
+            }
+            
+            double time1 = omp_get_wtime( );
+            double time = time1 - time0;
+            double megaMults = (double)(NUMNODES*NUMNODES)/(time)/1000000.;
+            sumMegaMults += megaMults;
         }
         
-        double time1 = omp_get_wtime( );
-        double time = time1 - time0;
-        double megaMults = (double)(NUMNODES*NUMNODES)/(time)/1000000.;
-        sumMegaMults += megaMults;
-
+        double avgMegaMults = sumMegaMults/(double)NUMTRIES;
+        printf("Number Nodes = %d \n", NUMNODES);
+        printf("Result = %lf \n", sum);
+        printf("Performance = %8.2lf megaMults/Sec\n", avgMegaMults);
     }
-
-    double avgMegaMults = sumMegaMults/(double)NUMTRIES;
-    printf("Number Nodes = %d \n", NUMNODES);
-    printf("Result = %lf \n", sum);
-    printf("Performance = %8.2lf megaMults/Sec\n", avgMegaMults);
     
 }
+
+
+
+
+
