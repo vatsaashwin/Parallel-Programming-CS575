@@ -4,7 +4,7 @@
 
 // setting the number of threads:
 #ifndef NUMT
-#define NUMT        4
+#define NUMT        1 //change this value to run for 1, 2, 4, 6, 8
 #endif
 
 #define XMIN     0.
@@ -59,7 +59,7 @@ float Height( int iu, int iv, int number_nodes )    // iu,iv = 0 .. NUMNODES-1
     float v = (float)iv / (float)(number_nodes-1);
 
     // the basis functions:
- 
+
     float bu0 = (1.-u) * (1.-u) * (1.-u);
     float bu1 = 3. * u * (1.-u) * (1.-u);
     float bu2 = 3. * u * u * (1.-u);
@@ -71,6 +71,7 @@ float Height( int iu, int iv, int number_nodes )    // iu,iv = 0 .. NUMNODES-1
     float bv3 = v * v * v;
 
     // finally, we get to compute something:
+
 
     float top =       bu0 * ( bv0*TOPZ00 + bv1*TOPZ01 + bv2*TOPZ02 + bv3*TOPZ03 )
     + bu1 * ( bv0*TOPZ10 + bv1*TOPZ11 + bv2*TOPZ12 + bv3*TOPZ13 )
@@ -86,6 +87,7 @@ float Height( int iu, int iv, int number_nodes )    // iu,iv = 0 .. NUMNODES-1
     // then that contribution to the overall volume is negative
 }
 
+
 int main( int argc, char *argv[ ] )
 {
     #ifndef _OPENMP
@@ -96,7 +98,10 @@ int main( int argc, char *argv[ ] )
     omp_set_num_threads( NUMT );
     fprintf( stderr, "Using %d threads\n", NUMT );
 
-    for (int number_nodes=5000 ; number_nodes <= 40000; number_nodes += 5000) 
+
+    //int numnodes[] = { 500, 1000, 2500, 5000, 10000, 15000, 25000, 35000};
+
+    for (int number_nodes=500 ; number_nodes <= 40000; number_nodes += 5000)
     {
         // the area of a single full-sized tile:
         float fullTileArea = (  ( ( XMAX - XMIN )/(float)(number_nodes-1) )  *
@@ -108,7 +113,7 @@ int main( int argc, char *argv[ ] )
         double sumMegaMults = 0.;
         double time0 = omp_get_wtime( );
         double end = number_nodes-1;
-        
+
         #pragma omp parallel for default(none), shared(fullTileArea, number_nodes, end), reduction(+:sum)
         for( int i = 0; i <= number_nodes*number_nodes; i++ )
         {
@@ -120,7 +125,7 @@ int main( int argc, char *argv[ ] )
             else if ((iu == 0 && iv!=end && iv !=0) || (iu == end && iv!=end && iv != 0) || (iv == 0 && iu!=end && iu != 0) || (iv == end && iu!=end && iu != 0))
                 w = 0.5;
             sum += Height(iu, iv, number_nodes) * w * fullTileArea;
-        }
+         }
 
         double time1 = omp_get_wtime( );
         double time = time1 - time0;
@@ -130,6 +135,6 @@ int main( int argc, char *argv[ ] )
         printf("Result = %10.2lf \n", sum);
         printf("Performance = %10.2lf megaMults/Sec\n", sumMegaMults);
     }
-
 }
+
 
