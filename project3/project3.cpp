@@ -4,10 +4,6 @@
 #include <omp.h>
 #include <stdio.h>
 
-// Requirements
-// You are creating a month-by-month simulation of a grain-growing operation. The amount the grain grows is affected by the temperature, amount of precipitation, and the number of "graindeer" around to eat it. The number of graindeer depends on the amount of grain available to eat.
-// The "state" of the system consists of the following global variables:
-
 int	NowYear;		// 2019 - 2024
 int	NowMonth;		// 0 - 11
 
@@ -19,10 +15,6 @@ int NowNumDragons; //number of dragons in the current population
 // Your basic time step will be one month. Interesting parameters that you need are:
 
 const float GRAIN_GROWS_PER_MONTH =		8.0;
-const int   DEER_GROWS_PER_MONTH =                20;
-const int   DRAGON_GROWS_PER_MONTH =                1;
-
-
 const float ONE_DRAGON_EATS_PER_MONTH =     1.0;
 const float ONE_DEER_EATS_PER_MONTH =		0.5;
 
@@ -36,20 +28,15 @@ const float RANDOM_TEMP =			10.0;	// plus or minus noise
 
 const float MIDTEMP =				40.0;
 const float MIDPRECIP =				10.0;
-// Units of grain growth are inches. 
-// Units of temperature are degrees Fahrenheit (°F). 
-// Units of precipitation are inches.
 
-float
-Ranf( unsigned int *seedp,  float low, float high )
+float Ranf( unsigned int *seedp,  float low, float high )
 {
         float r = (float) rand_r( seedp );              // 0 - RAND_MAX
 
         return(   low  +  r * ( high - low ) / (float)RAND_MAX   );
 }
 
-int
-Ranf( unsigned int *seedp, int ilow, int ihigh )
+int Ranf( unsigned int *seedp, int ilow, int ihigh )
 {
         float low = (float)ilow;
         float high = (float)ihigh + 0.9999f;
@@ -68,100 +55,114 @@ unsigned int seed = 0;  // a thread-private variable
 float x = Ranf( &seed, -1.f, 1.f );
 
 
-// In addition to this, you must add in some other phenomenon that directly or indirectly controls the growth of the 
-// grain and/or the graindeer population. Your choice of this is up to you.
-// You are free to tweak the constants to make everything turn out "more interesting".
-// The GrainGrowth and GrainDeer threads will each compute the next grain height and the next number of deer based 
-// on the current set of global state variables. They will compute these into local, temporary, variables. 
-// They both then will hit the DoneComputing barrier.
-
 void Grain()
 {
-     compute into tmp variables
-    // float tempFactor = exp(-pow((NowTemp - MIDTEMP) / 10., 2));
-    // float precipFactor = exp(-pow((NowPrecip - MIDPRECIP) / 10., 2));
-    float tempFactor = exp(   -SQR(  ( NowTemp - MIDTEMP ) / 10.  )   );
-	float precipFactor = exp(   -SQR(  ( NowPrecip - MIDPRECIP ) / 10.  )   );
+    float NowHeight = ::NowHeight;
 
-    float tempNowHeight  = NowHeight;
-    // tempNowHeight += tempFactor * precipFactor * GRAIN_GROWS_PER_MONTH;
-    // tempNowHeight -= (float)NowNumDeer * ONE_DEER_EATS_PER_MONTH + NowNumPest * PEST_GROWS_PER_MONTH;
+    while(NowYear < 2025)
+    {
+        // compute a temporary next-value for this quantity
+        // based on the current state of the simulation:
+        float tempFactor = exp(-SQR((NowTemp - MIDTEMP)/ 10.));
+        float precipFactor = exp(-SQR((NowPrecip - MIDPRECIP)/ 10.));
 
-    // You then use tempFactor and precipFactor like this:
-	tempNowHeight += tempFactor * precipFactor * GRAIN_GROWS_PER_MONTH;
-	tempNowHeight -= (float)NowNumDeer * ONE_DEER_EATS_PER_MONTH;
+        NowHeight += tempFactor * precipFactor * GRAIN_GROWS_PER_MONTH;
+        NowHeight -= (float)NowNumDeer * ONE_DEER_EATS_PER_MONTH;
 
-    if(tempNowHeight <= 0.)
-        tempNowHeight = 0.;
+        if(NowHeight < 0)
+            NowHeight = 0.;
 
-#pragma omp barrier
-     // copy into global variables
-    NowHeight = tempNowHeight;
-#pragma omp barrier
-#pragma omp barrier
+        #pragma omp barrier
+
+        ::NowHeight = NowHeight;
+
+        #pragma omp barrier
+
+        #pragma omp barrier
+    }
 }
 
 void GrainDeer()
 {
-    float grainFactor = 1 - exp(   -SQR(  ( NowHeight - 0.0 ) / 10.  )   );
-    //  compute into tmp variables
-    int tempNowNumDeer = NowNumDeer;
-    tempNowNumDeer += grainFactor * DEER_GROWS_PER_MONTH;
+    float NowNumDeer = ::NowNumDeer;
 
-    if (tempNowNumDeer > ONE_DRAGON_EATS_PER_MONTH * NowNumDragons && tempNowNumDeer > NowHeight / ONE_DEER_EATS_PER_MONTH)
-        tempNowNumDeer -= ONE_DRAGON_EATS_PER_MONTH * NowNumDragons;
-    else
-        tempNowNumDeer = tempNowNumDeer * 0.75;
-#pragma omp barrier
-    //  copy into global variables
-    NowNumDeer = tempNowNumDeer;
-#pragma omp barrier
-#pragma omp barrier
+    while(NowYear < 2025)
+    {
+        if(NowNumDeer > NowHeight)
+            NowNumDeer -= 1;
+        else if(NowNumDeer < NowHeight)
+                NowNumDeer += 1;
+        
+        NowNumDeer -= (float)NowNumDragons * ONE_DRAGON_EATS_PER_MONTH;
 
+        if(NowNumDeer < 0)
+            NowNumDeer = 0;
+
+        #pragma omp barrier
+
+        ::NowNumDeer = NowNumDeer;
+
+        #pragma omp barrier
+
+        #pragma omp barrier
+    }
 }
 
 void Dracarys()
 {
-    int tempNumDragons = NowNumDragons;
-    float deerFactor = 1 - exp(   -SQR(  ( NowNumDeer - 30 ) / 10.  )   );
-    
-    if (deerFactor > 0.5 && NowNumDeer > 30)
-        tempNumDragons += DRAGON_GROWS_PER_MONTH;
-    if (tempNumDragons > NowNumDeer / ONE_DRAGON_EATS_PER_MONTH / 6.)
-        tempNumDragons = tempNumDragons * 0.5;
-    
-#pragma omp barrier
-    NowNumDragons = tempNumDragons;
-#pragma omp barrier
-#pragma omp barrier
+ 	while(NowYear < 2025)
+    {
+        // compute a temporary next-value for this quantity
+        // based on the current state of the simulation:
+        if(NowNumDragons > NowNumDeer)
+            NowNumDragons = 0;
+        else if(NowNumDragons < NowNumDeer && NowNumDeer - NowNumDragons > 4)
+                NowNumDragons += 1;
+
+        #pragma omp barrier
+
+        ::NowNumDragons = NowNumDragons;
+		#pragma omp barrier
+		#pragma omp barrier
+    }
 }
 
 
 void Watcher()
 {
+    int numMonth = 0;
+    while(NowYear < 2025)
+    {
+        #pragma omp barrier
+        #pragma omp barrier
+        
+        NowMonth++;
+        numMonth++;
 
-	#pragma omp barrier
-    #pragma omp barrier
+        if(NowMonth % 12 == 0)  // Increment Year after 12 months
+        {
+            NowMonth = 0;
+            NowYear++;
+        }
 
-    printf("%d\t%.2f\t%.2f\t%.2f\t%d\t%d\n", NowMonth+1, NowTemp, NowPrecip, NowHeight, NowNumDeer, NowNumDragons);
+        // Calculate Temperature and Precipitation
+        float ang = (30.*(float)NowMonth + 15.) * (M_PI/ 180.);
+        float temp = AVG_TEMP - AMP_TEMP * cos(ang);
+        
+        unsigned int seed = 0;
+        NowTemp = temp + Ranf(&seed, -RANDOM_TEMP, RANDOM_TEMP);
+
+        float precip = AVG_PRECIP_PER_MONTH + AMP_PRECIP_PER_MONTH * sin(ang);
+        NowPrecip = precip + Ranf(&seed, -RANDOM_PRECIP, RANDOM_PRECIP);
+        
+        if(NowPrecip < 0.)
+            NowPrecip = 0.;
+
+        printf("%d\t%.2f\t%.2f\t%.2f\t%d\t%d\n", numMonth, NowPrecip, NowTemp, NowHeight, NowNumDeer, NowNumDragons);
     
-    //  update month and year
-    NowMonth++;
-    NowYear = 2019 + NowMonth/12;
-
-    float ang = (  30.*(float)NowMonth + 15.  ) * ( M_PI / 180. );
-	float temp = AVG_TEMP - AMP_TEMP * cos( ang );
-
-	unsigned int seed = 0;
-	NowTemp = temp + Ranf( &seed, -RANDOM_TEMP, RANDOM_TEMP );
-
-	float precip = AVG_PRECIP_PER_MONTH + AMP_PRECIP_PER_MONTH * sin( ang );
-	NowPrecip = precip + Ranf( &seed,  -RANDOM_PRECIP, RANDOM_PRECIP );
-	if( NowPrecip < 0. )
-		NowPrecip = 0.;
-
-	#pragma omp barrier
-
+        // DonePrinting barrier:
+        #pragma omp barrier
+    }
 }
 
 
@@ -181,10 +182,9 @@ int main( int argc, char *argv[])
 	NowYear  = 2019;
 
 	// starting state (feel free to change this if you want):
-	NowNumDeer = 1;
+	NowNumDeer = 10;
+	NowHeight =  10.;
 	NowNumDragons = 1;
-	NowHeight =  1.;
-	seed 	   = 0;
 
 	//The temperature and precipation function of a particular month
 	float ang = (  30.*(float)NowMonth + 15.  ) * ( M_PI / 180. );
@@ -225,6 +225,7 @@ int main( int argc, char *argv[])
    	
 		}
 	}
+
 	return 0;
 }
 
