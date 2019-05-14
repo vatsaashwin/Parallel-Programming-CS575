@@ -165,7 +165,6 @@ int main( int argc, char *argv[ ] )
 		if( p > maxPerformanceSimdMulSum )
 		{   
 			maxPerformanceSimdMulSum = p;
-			printf("sum - simd = %.4f\n", s);
 		}        
             
 
@@ -186,7 +185,6 @@ int main( int argc, char *argv[ ] )
 		if( p > maxPerformanceNonSimdMulSum )
 		{
 			maxPerformanceNonSimdMulSum = p;
-			printf("sum - simd = %.4f\n", s);
 		}
  
     }

@@ -15,12 +15,15 @@
 
 #define SSE_WIDTH	4
 
-#define ALIGNED		__attribute__((aligned(16)))
+#define ALIGNED         __attribute__((aligned(16)))
 
 
-void	SimdMul(    float *, float *,  float *, int );
-float	SimdMulSum( float *, float *, int );
-void 	NonSimdMul( float *a, float *b,   float *c,   int len )
-float 	NonSimdMulSum( float *a, float *b, int len );
+void    SimdMul(    float *, float *,  float *, int );
+float   SimdMulSum( float *, float *, int );
+void    NonSimdMul( float *a, float *b,   float *c,   int len );
+//float         NonSimdMulSum( float *a, float *b, int len );
+float NonSimdMulSum( float *a, float *b, int len );
+#endif          // SIMD_H
 
-#endif		// SIMD_H
+
+
