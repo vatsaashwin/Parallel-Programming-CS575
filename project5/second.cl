@@ -2,7 +2,7 @@ kernel
 void
 ArrayMult( global const float *dA, global const float *dB, const global float *dC, global float *dD )
 {
-	int gid = get_global_id( 0 );
+        int gid = get_global_id( 0 );
 
-	dD[gid] = dA[gid] * dB[gid] + dC[gid];
+        dD[gid] = dA[gid] * dB[gid] + dC[gid];
 }

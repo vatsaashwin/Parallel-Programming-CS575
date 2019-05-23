@@ -7,7 +7,7 @@ ArrayMultReduce( global const float *dA, global const float *dB, local float *pr
     // 0 .. numItems-1
     int wgNum = get_group_id( 0 ); // which work-group number this is in
     prods[ tnum ] = dA[ gid ] * dB[ gid ]; // multiply the two arrays together
-    
+
     // all threads execute this code simultaneously:
     for( int offset = 1; offset < numItems; offset *= 2 )
     {
